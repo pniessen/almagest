@@ -362,6 +362,32 @@ function renderContract(){
     (<span class="red">near downgrade</span>).</div>
     <table style="margin-top:10px"><thead><tr><th></th><th>measure</th><th>star</th><th>path</th>
     <th class="num">value</th><th>position in cut-point band</th></tr></thead><tbody>${rows}</tbody></table></div>`));
+
+  // remediation levers (exact what-ifs through the replicated roll-up)
+  const rem=(D.remediation||{})[r.id];
+  if(rem&&rem.length){
+    const row=x=>{const nm=(D.measure_names[x.m]||{name:x.m}).name;
+      const dp=x.dp!=null?((x.dp>=0?"+":"")+(x.dp*100).toFixed(1)+"pp"):"—";
+      return `<tr><td>${x.h===1?targetYear:targetYear+1}</td>
+        <td class="${x.sc==="defend"?"red":"green"}">${x.sc}</td>
+        <td class="dim" style="white-space:normal;max-width:300px">${nm}</td>
+        <td>${starGlyphs(x.sn)}</td><td class="num">${x.sf!=null?x.sf.toFixed(1):"—"}</td>
+        <td class="num">${x.w}×</td>
+        <td class="num">${x.up!=null?fmt.pct(x.up):"—"}</td>
+        <td class="num ${x.dp>0?"green":"faint"}">${dp}</td>
+        <td>${x.x40?'<span class="tag up">flips 4.0</span>':""}</td></tr>`;};
+    const sorted=rem.slice().sort((a,b)=>a.h-b.h||(a.sc<b.sc?-1:1)||a.rk-b.rk);
+    c.appendChild(el(`<div class="panel"><h2>Remediation levers</h2>
+      <div class="note"><b class="red">defend</b> = a measure forecast to slip, held at its current star;
+      <b class="green">improve</b> = lifted one star above current. Effects run through the exact replicated CMS
+      roll-up (weights + reward factor + CAI); ΔP(≥4.0) by Monte-Carlo on common draws. <b>The clock:</b> most
+      measures for a star year were MEASURED two calendar years earlier — interventions launched now mostly land
+      in the ${targetYear+1} rating (the 2-yr rows); the ${targetYear} rows are the defend/disputes list. "band
+      pos." = how close the raw value already sits to the next cut point up (100% = touching it).</div>
+      <table style="margin-top:10px"><thead><tr><th>rating yr</th><th>play</th><th>measure</th><th>now</th>
+      <th class="num">fcst</th><th class="num">wt</th><th class="num">band pos.</th><th class="num">ΔP(≥4.0)</th><th></th></tr></thead>
+      <tbody>${sorted.map(row).join("")}</tbody></table></div>`));
+  }
 }
 
 /* ================================================================ ACCURACY */
