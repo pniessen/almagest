@@ -240,6 +240,7 @@ function renderBoard(){
     <thead><tr>
       <th data-s="id">contract</th><th data-s="org">carrier</th><th class="num" data-s="mm">members</th>
       <th data-s="cur">current ★</th><th data-s="p1">pred ${targetYear}</th><th class="num" data-s="pr1">P(≥4.0)</th>
+      ${F.some(r=>r.pdown!=null)?'<th class="num" data-s="pdown">P(down)</th>':""}
       <th data-s="p2">pred ${targetYear+1}</th><th>flags</th></tr></thead><tbody></tbody></table></div>`);
   wrap.querySelectorAll("th[data-s]").forEach(th=>th.onclick=()=>{
     const k=th.dataset.s; state.dir=state.sort===k?-state.dir:-1; state.sort=k; renderTable(); });
@@ -260,6 +261,7 @@ function renderBoard(){
       const tr=el(`<tr><td class="gold">${r.id}</td><td class="dim">${shortOrg(r.org)}</td>
         <td class="num">${fmt.members(r.mm)}</td><td>${starGlyphs(r.cur)}</td>
         <td>${starGlyphs(r.p1)} ${delta(r.p1,r.cur)}</td><td class="num">${pbar(r.pr1)}</td>
+        ${F.some(x=>x.pdown!=null)?`<td class="num">${r.pdown!=null?fmt.pct(r.pdown):'<span class="faint">—</span>'}</td>`:""}
         <td>${starGlyphs(r.p2)} ${delta(r.p2,r.p1)}</td>
         <td>${r.risk?'<span class="tag risk">at risk</span> ':""}${r.up?'<span class="tag up">upside</span> ':""}${r.basis!=="blend"?'<span class="tag prior">prior</span>':""}</td></tr>`);
       tr.onclick=()=>{selected=r.id; show("contract");};
