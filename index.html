@@ -305,6 +305,27 @@ function ratingChart(hist,fc){
     <path d="${path}" fill="none" stroke="var(--gold)" stroke-width="2"/>${dots}${fcast}${xlab}
     <text x="${W-10}" y="${Y(4)-6}" fill="var(--gold)" font-size="9" text-anchor="end">4.0 bonus line</text></svg>`;
 }
+function measureDetailHTML(r,mid){
+  const det=((D.measure_detail||{})[r.id]||{})[mid];
+  const fc=((D.measure_fcst||{})[r.id]||{})[mid]||[];
+  if(!det) return '<span class="faint">no supplemental detail for this measure (no rated value last publication)</span>';
+  const [w,dom,np_,sig,ex,pctl,drv]=det;
+  const drivers=(drv||"").split("|").filter(Boolean).map(s=>{
+    const i=s.lastIndexOf(":"); const n=s.slice(0,i), v=s.slice(i+1);
+    return `<span class="${v.startsWith("-")?"red":"green"}">${n} ${v}★</span>`;
+  }).join('<span class="faint"> · </span>');
+  const line=(l,v)=>`<div style="margin:3px 0"><span class="faint" style="display:inline-block;min-width:175px">${l}</span>${v}</div>`;
+  return [
+    line("forecast", `${fc[0]!=null?fc[0].toFixed(2)+"★ ("+targetYear+")":"—"}${fc[1]!=null?` · ${fc[1].toFixed(2)}★ (${targetYear+1})`:""}${sig!=null?` <span class="faint">· typical error ±${sig.toFixed(2)}★ on this measure</span>`:""}`),
+    line("track record", ex!=null?`the model calls this measure exactly right <b>${(ex*100).toFixed(0)}%</b> of the time (walk-forward 2021–2026)`:"—"),
+    line("how it's made", `one pooled LightGBM over every (contract, measure) pair, seed-averaged${drivers?`; <b>top drivers here</b>: ${drivers}`:""}`),
+    line("weight / domain", `<b>${w}×</b> at the ${targetYear} roll-up${dom?` · domain ${dom}`:""}`),
+    line("peers rated", np_!=null?`${np_} contracts carry this measure <span class="faint">(per-contract survey N is HPMS-only, not in the public files)</span>`:"—"),
+    line("current value", pctl!=null?`<b>${(pctl*100).toFixed(0)}th</b> percentile across rated contracts`:"—"),
+    line("the clock", `the ${targetYear} star mostly reflects calendar ${targetYear-2} performance — interventions launched now land in ${targetYear+1}+`),
+  ].join("");
+}
+
 function renderContract(){
   const c=containers.contract; c.innerHTML="";
   if(!selected){ // default to largest at-risk, else largest
@@ -361,18 +382,27 @@ function renderContract(){
         fcHTML=`<td class="num"><span class="${cls}">${f.toFixed(1)}${d<=-0.5?" ↘":d>=0.5?" ↗":""}</span></td>`;
       } else fcHTML='<td class="num faint">—</td>';
     }
-    return `<tr><td class="faint">${nm.part}</td><td class="dim" style="white-space:normal;max-width:330px">${nm.name}</td>
+    return `<tr class="mrow" data-mid="${mid}" style="cursor:pointer"><td class="faint">${nm.part}</td><td class="dim" style="white-space:normal;max-width:330px">${nm.name}</td>
       <td>${starGlyphs(lastStar[1])}</td>${fcHTML}<td>${sparkline(histM,70,22)}</td>
       <td class="num">${v?v[2]:"—"}</td><td>${bandHTML}</td></tr>`;
   }).join("");
-  c.appendChild(el(`<div class="panel"><h2>Measures · ${detailYear}</h2>
+  const ncols=hasFc?7:6;
+  const mpanel=el(`<div class="panel"><h2>Measures · ${detailYear}</h2>
     <div class="note">Each measure's published star${hasFc?`, the model's <b>forecast star for ${targetYear}</b> (continuous;
     read as direction + risk flag — per-measure error is ~0.3★, errors partially cancel in the roll-up)`:""}, its recent
     path, the raw value, and where that value sits <b>inside its published cut-point band</b> — the marker near the
     right edge means one good year crosses the next cut point (<span class="green">near upgrade</span>); near the left
-    edge, one bad year drops a star (<span class="red">near downgrade</span>).</div>
+    edge, one bad year drops a star (<span class="red">near downgrade</span>).
+    <b>Click any row</b> for the forecast's supplemental detail (drivers, weight, peers, track record).</div>
     <table style="margin-top:10px"><thead><tr><th></th><th>measure</th><th>star</th>${hasFc?`<th class="num">fcst ${targetYear}</th>`:""}<th>path</th>
-    <th class="num">value</th><th>position in cut-point band</th></tr></thead><tbody>${rows}</tbody></table></div>`));
+    <th class="num">value</th><th>position in cut-point band</th></tr></thead><tbody>${rows}</tbody></table></div>`);
+  c.appendChild(mpanel);
+  mpanel.querySelectorAll("tr.mrow").forEach(tr=>tr.onclick=()=>{
+    const nxt=tr.nextElementSibling;
+    if(nxt&&nxt.classList.contains("mdetail")){nxt.remove();return;}
+    mpanel.querySelectorAll("tr.mdetail").forEach(x=>x.remove());
+    tr.after(el(`<tr class="mdetail"><td colspan="${ncols}" style="background:rgba(255,255,255,.025);padding:10px 16px">${measureDetailHTML(r,tr.dataset.mid)}</td></tr>`));
+  });
 
   // remediation levers (exact what-ifs through the replicated roll-up)
   const rem=(D.remediation||{})[r.id];
