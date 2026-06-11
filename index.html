@@ -339,8 +339,9 @@ function renderContract(){
       </tbody></table></div>
   </div>`));
 
-  // measure table with cut-point distances
-  const ms=D.measures[r.id]||{}, vals=D.values[r.id]||{};
+  // measure table with cut-point distances + per-measure forecast
+  const ms=D.measures[r.id]||{}, vals=D.values[r.id]||{}, mfc=(D.measure_fcst||{})[r.id]||{};
+  const hasFc=Object.keys(mfc).length>0;
   const mids=Object.keys(ms).sort((a,b)=>{
     const A=D.measure_names[a]||{},B=D.measure_names[b]||{};
     return (A.part+a)<(B.part+b)?-1:1;});
@@ -351,16 +352,26 @@ function renderContract(){
     const near=rel!=null?(rel>0.8?"nearup":rel<0.2?"neardown":""):"";
     const bandHTML=rel!=null?`<span class="bandbar ${near}"><span></span><b style="left:${(rel*100).toFixed(0)}%"></b></span>
       <span class="${near==="nearup"?"green":near==="neardown"?"red":"faint"}" style="font-size:10px">${near==="nearup"?"near upgrade":near==="neardown"?"near downgrade":""}</span>`:'<span class="faint">—</span>';
+    let fcHTML="";
+    if(hasFc){
+      const f=(mfc[mid]||[])[0], cur=lastStar?lastStar[1]:null;
+      if(f!=null){
+        const d=cur!=null?f-cur:0;
+        const cls=d<=-0.5?"red":d>=0.5?"green":"faint";
+        fcHTML=`<td class="num"><span class="${cls}">${f.toFixed(1)}${d<=-0.5?" ↘":d>=0.5?" ↗":""}</span></td>`;
+      } else fcHTML='<td class="num faint">—</td>';
+    }
     return `<tr><td class="faint">${nm.part}</td><td class="dim" style="white-space:normal;max-width:330px">${nm.name}</td>
-      <td>${starGlyphs(lastStar[1])}</td><td>${sparkline(histM,70,22)}</td>
+      <td>${starGlyphs(lastStar[1])}</td>${fcHTML}<td>${sparkline(histM,70,22)}</td>
       <td class="num">${v?v[2]:"—"}</td><td>${bandHTML}</td></tr>`;
   }).join("");
   c.appendChild(el(`<div class="panel"><h2>Measures · ${detailYear}</h2>
-    <div class="note">Each measure's published star, its recent path, the raw value, and where that value sits
-    <b>inside its published cut-point band</b> — the marker near the right edge means one good year crosses the next
-    cut point (<span class="green">near upgrade</span>); near the left edge, one bad year drops a star
-    (<span class="red">near downgrade</span>).</div>
-    <table style="margin-top:10px"><thead><tr><th></th><th>measure</th><th>star</th><th>path</th>
+    <div class="note">Each measure's published star${hasFc?`, the model's <b>forecast star for ${targetYear}</b> (continuous;
+    read as direction + risk flag — per-measure error is ~0.3★, errors partially cancel in the roll-up)`:""}, its recent
+    path, the raw value, and where that value sits <b>inside its published cut-point band</b> — the marker near the
+    right edge means one good year crosses the next cut point (<span class="green">near upgrade</span>); near the left
+    edge, one bad year drops a star (<span class="red">near downgrade</span>).</div>
+    <table style="margin-top:10px"><thead><tr><th></th><th>measure</th><th>star</th>${hasFc?`<th class="num">fcst ${targetYear}</th>`:""}<th>path</th>
     <th class="num">value</th><th>position in cut-point band</th></tr></thead><tbody>${rows}</tbody></table></div>`));
 
   // remediation levers (exact what-ifs through the replicated roll-up)
