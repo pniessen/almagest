@@ -225,6 +225,20 @@ function renderBoard(){
     d.onclick=()=>{ selected=d.dataset.id; show("contract"); };});
   c.appendChild(hz);
 
+  if((D.warnings||[]).length){
+    const W=D.warnings;
+    c.appendChild(el(`<div class="panel" style="border-left:3px solid #e6b54a">
+      <h2>Preview-window disclosures · star year ${W[0].y}</h2>
+      <div class="note">Issuer 8-Ks mentioning star ratings filed between the August forecast issuance and the
+      October publication — companies see their ratings in the CMS plan preview first, and material changes
+      surface here weeks early (this caught Centene Sep-2022/Sep-2024 and Humana Oct-2024). Issuer-disclosed
+      provenance; outside the model's information clock by design.</div>
+      <table><thead><tr><th>filed</th><th>parent</th><th>form</th><th>contracts</th><th>at 4.0+</th><th></th></tr></thead>
+      <tbody>${W.map(w=>`<tr><td>${w.dt}</td><td>${w.org}</td><td class="dim">${w.form}</td>
+        <td>${w.n}</td><td>${w.n40}</td><td><a href="${w.url}" target="_blank" rel="noopener" class="dim">EDGAR ↗</a></td></tr>`).join("")}</tbody></table>
+    </div>`));
+  }
+
   const ctr=el(`<div class="controls">
     <input type="text" placeholder="search contract / carrier…" value="${state.q}">
     <select><option value="">all carriers</option>${carriers.map(o=>`<option ${o===state.org?"selected":""}>${o}</option>`).join("")}</select>
